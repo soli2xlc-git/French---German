@@ -127,7 +127,7 @@ a.wm{opacity:.6;font-weight:600;letter-spacing:0;box-shadow:none}
 a.wm:hover{background:var(--card);color:var(--bl)}
 </style></head><body>
 <h1>🇫🇷 Français – Découvertes Vokabeltrainer</h1>
-<div class="sm">Unité 1–3 · Vokabular S. 162–171 · läuft komplett im Browser</div>
+<div class="sm">Unité 1 + 2 · läuft komplett im Browser</div>
 <nav id="tabs"></nav>
 <div class="row"><select id="unit"></select><select id="dir"><option value="0">Französisch → Deutsch</option><option value="1">Deutsch → Französisch</option></select><input id="q" placeholder="Suchen…"></div>
 <div id="app"></div>
@@ -357,68 +357,37 @@ sentir qc|etw. spüren; etw. riechen
 lancer un regard à qn|jdm. einen Blick zuwerfen
 frapper qn|jdn. schlagen
 dire la vérité à qn|jdm. die Wahrheit sagen
-mentir à qn|jdn. belügen
-U3 Tu te rappelles
-une région|eine Region
-une gare|ein Bahnhof
-un port|ein Hafen
-un centre-ville|eine Stadtmitte
-une vieille ville|eine Altstadt
-un quartier|ein (Stadt-)Viertel
-connu(e)|bekannt
-un office de tourisme|eine Touristeninformation
-un(e) touriste|ein Tourist/eine Touristin
-visiter qc|etw. besichtigen
-faire un tour|eine Tour machen
-un trajet|eine Strecke
-une journée|ein Tag (im Verlauf)
-se réveiller|aufwachen
-travailler|arbeiten
-retourner|zurückkehren
-une carte|eine Karte
-un vendeur/une vendeuse|ein Verkäufer/eine Verkäuferin
-U3 Atelier A (S. 171)
-une frontière|eine Grenze
-belge|belgisch
-une capitale|eine Hauptstadt
-flamand(e)|flämisch
-un hôtel de ville|ein Rathaus
-un beffroi|ein Glockenturm
-une braderie|ein Trödelmarkt
-plus de|mehr als
-un visiteur/une visiteuse|ein Besucher/eine Besucherin
-un accent|ein Akzent
-un habitant/une habitante|ein Einwohner/eine Einwohnerin
-une spécialité|eine Spezialität
-un caractère|ein Charakter
-multiculturel(le)|multikulturell
-un carrefour|eine Kreuzung; ein Schnittpunkt
-l'Europe (f.)|Europa
-Bruxelles|Brüssel`;
+mentir à qn|jdn. belügen`;
 const W=[];let cu="";
-RAW.trim().split("\n").forEach(l=>{if(/^U\d /.test(l))cu=l;else{const[f,d]=l.split("|");W.push({f,d,u:cu})}});
-const units=[...new Set(W.map(w=>w.u))];
+RAW.trim().split("\n").forEach(l=>{if(/^U\d /.test(l))cu=l;else{const[f,d]=l.split("|");W.push({f,d,u:cu,p:cu.slice(0,2)})}});
+const PARTS=[["U1","Teil 1 · Unité 1"],["U2","Teil 2 · Unité 2"]];
 const $=id=>document.getElementById(id);
 function boom(){praise();const c=["#e0670f","#8c939d","#f5a45d","#c9ccd1"];for(let i=0;i<40;i++){const s=document.createElement("i");s.className="cf";s.style.cssText=`left:${50+(Math.random()-.5)*30}vw;top:45vh;background:${c[i%4]};--x:${(Math.random()-.5)*600}px;--y:${-Math.random()*350-100}px;--r:${Math.random()*720}deg`;document.body.appendChild(s);setTimeout(()=>s.remove(),1200)}}
-const U=$("unit");U.innerHTML='<option value="">Alle Abschnitte ('+W.length+' Einträge)</option>'+units.map(u=>`<option>${u}</option>`).join("");
+const U=$("unit");
+const HK=w=>w.f+"|"+w.d;
+let hard=new Set();try{hard=new Set(JSON.parse(localStorage.getItem("frh")||"[]"))}catch(e){}
+function saveHard(){try{localStorage.setItem("frh",JSON.stringify([...hard]))}catch(e){}}
+function buildSel(){const v=U.value;U.innerHTML='<option value="">Alle Teile ('+W.length+' Einträge)</option>'+PARTS.map(([k,n])=>`<option value="${k}">${n} (${W.filter(w=>w.p==k).length} Einträge)</option>`).join("")+`<option value="H">⭐ Schwere Wörter (${W.filter(w=>hard.has(HK(w))).length} Einträge)</option>`;U.value=v}
+const NONE=()=>U.value=="H"?"Noch keine schweren Wörter. Markiere Wörter bei den Karten mit ⭐ Schwer.":"Keine Treffer.";
+buildSel();
 let tab="live",hide=0,dir=0,pool=[],card=null,flip=0,score=[0,0],mode="mc",qa=null;
 const tabs={list:"📖 Liste",cards:"🃏 Karten",quiz:"❓ Quiz",type:"⌨️ Tippen",live:"🔴 Live"};
 function nav(){$("tabs").innerHTML=Object.entries(tabs).map(([k,v])=>`<button class="${k==tab?"on":""}" onclick="tab='${k}';start()">${v}</button>`).join("")}
-function filt(){const q=$("q").value.toLowerCase();return W.filter(w=>(!U.value||w.u==U.value)&&(!q||(w.f+w.d).toLowerCase().includes(q)))}
+function filt(){const q=$("q").value.toLowerCase();return W.filter(w=>(!U.value||(U.value=="H"?hard.has(HK(w)):w.p==U.value))&&(!q||(w.f+w.d).toLowerCase().includes(q)))}
 const sh=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
 const Q=w=>dir?w.d:w.f,A=w=>dir?w.f:w.d,esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
 function start(){liveStop();dir=+$("dir").value;nav();pool=sh(filt());score=[0,0];flip=0;next(true)}
-function next(first){if(tab=="list")return list();if(tab=="live")return live();if(!pool.length){$("app").innerHTML="<p>Keine Treffer.</p>";return}
+function next(first){if(tab=="list")return list();if(tab=="live")return live();if(!pool.length){$("app").innerHTML="<p>"+NONE()+"</p>";return}
 if(!first)pool.push(pool.shift());card=pool[0];flip=0;qa=null;draw()}
-function list(){let h=`<div class="row"><button onclick="hide=!hide;list()">${hide?"Übersetzung zeigen":"Übersetzung verdecken"}</button></div><div class="sm">${filt().length} Einträge – Klick auf Zeile zum Aufdecken</div>`,last="";
-filt().forEach((w,i)=>{if(w.u!=last){h+=`<div class="u">${w.u}</div>`;last=w.u}h+=`<div class="w ${hide?"h":""}" style="animation-delay:${Math.min(i,24)*35}ms" onclick="this.classList.toggle('h')"><b>${esc(w.f)}</b><span>${esc(w.d)}</span></div>`});$("app").innerHTML=h}
-function draw(){const w=card;let h=`<div class="sm">Punkte: ${score[0]} / ${score[0]+score[1]} · ${pool.length} Karten im Stapel</div>`;
-if(tab=="cards"){h+=`<div class="fc ${flip?'f':''}" onclick="flip=!flip;draw()">${esc(flip?A(w):Q(w))}</div><div class="row"><button onclick="rate(1)">✅ Gewusst</button><button onclick="rate(0)">❌ Nochmal</button></div>`}
+function list(){let h=`<div class="row"><button onclick="hide=!hide;list()">${hide?"Übersetzung zeigen":"Übersetzung verdecken"}</button></div><div class="sm">${filt().length} Einträge – Klick auf Zeile zum Aufdecken</div>`,last="",lastp="";
+filt().forEach((w,i)=>{if(w.p!=lastp){h+=`<h2 style="margin:24px 0 0;color:var(--bl)">${PARTS.find(p=>p[0]==w.p)[1]}</h2>`;lastp=w.p}if(w.u!=last){h+=`<div class="u">${w.u}</div>`;last=w.u}h+=`<div class="w ${hide?"h":""}" style="animation-delay:${Math.min(i,24)*35}ms" onclick="this.classList.toggle('h')"><b>${esc(w.f)}</b><span>${esc(w.d)}</span></div>`});$("app").innerHTML=h}
+function draw(){const w=card;let h=`<div class="sm">Punkte: ${score[0]} / ${score[0]+score[1]} · ${pool.length} Karten im Stapel · ⭐ ${hard.size} schwer</div>`;
+if(tab=="cards"){h+=`<div class="fc ${flip?'f':''}" onclick="flip=!flip;draw()">${esc(flip?A(w):Q(w))}</div><div class="row"><button onclick="readCard()">🔊 Vorlesen</button></div><div class="row"><button onclick="rate(1)">✅ Gewusst</button><button onclick="rate(0)">❌ Nochmal</button><button onclick="hardMark()">⭐ Schwer</button></div>`}
 else if(tab=="quiz"){if(!qa){const o=sh([w,...sh(W.filter(x=>x!=w)).slice(0,3)]);qa=o}
-h+=`<div class="fc" style="min-height:110px;cursor:default">${esc(Q(w))}</div>`+qa.map((o,i)=>`<button class="opt" id="o${i}" onclick="pick(${i})">${esc(A(o))}</button>`).join("")}
-else{h+=`<div class="fc" style="min-height:110px;cursor:default">${esc(Q(w))}</div><div class="row"><input id="t" placeholder="Antwort…" autocomplete="off" onkeydown="if(event.key=='Enter')chk()"><button onclick="chk()">Prüfen</button></div><div id="r"></div>`}
+h+=`<div class="fc" style="min-height:110px;cursor:default">${esc(Q(w))}</div>`+'<div class="row"><button onclick="readCard()">🔊 Vorlesen</button></div>'+qa.map((o,i)=>`<button class="opt" id="o${i}" onclick="pick(${i})">${esc(A(o))}</button>`).join("")}
+else{h+=`<div class="fc" style="min-height:110px;cursor:default">${esc(Q(w))}</div><div class="row"><input id="t" placeholder="Antwort…" autocomplete="off" onkeydown="if(event.key=='Enter')chk()"><button onclick="chk()">Prüfen</button><button onclick="readCard()">🔊 Vorlesen</button></div><div id="r"></div>`}
 $("app").innerHTML=h;if($("t"))$("t").focus()}
-function rate(ok){if(ok)boom();score[ok?0:1]++;if(ok)pool.shift();else pool.push(pool.shift());if(!pool.length){$("app").innerHTML=`<h2>🎉 Geschafft!</h2><button onclick="start()">Neu starten</button>`;return}card=pool[0];flip=0;draw()}
+function rate(ok){if(ok&&U.value=="H"&&card){hard.delete(HK(card));saveHard();buildSel()}if(ok)boom();score[ok?0:1]++;if(ok)pool.shift();else pool.push(pool.shift());if(!pool.length){$("app").innerHTML=`<h2>🎉 Geschafft!</h2><button onclick="start()">Neu starten</button>`;return}card=pool[0];flip=0;draw()}
 function pick(i){const ok=qa[i]==card;if(ok)boom();document.getElementById("o"+i).classList.add(ok?"ok":"no");if(!ok)document.getElementById("o"+qa.indexOf(card)).classList.add("ok");score[ok?0:1]++;setTimeout(()=>next(),ok?500:1400)}
 const norm=s=>s.toLowerCase().replace(/[.!?…()\/,;]/g," ").replace(/\s+/g," ").trim();
 function chk(){const v=norm($("t").value),a=norm(A(card)),ok=v&&(v==a||a.split(/ ; |; /).some(x=>norm(x)==v));if(ok)boom();score[ok?0:1]++;$("r").innerHTML=`<p class="${ok?"ok":"no"}" style="padding:10px;border-radius:10px">${ok?"✅ Richtig!":"❌ Richtig wäre: "+esc(A(card))}</p><button onclick="next()">Weiter</button>`}
@@ -429,7 +398,7 @@ document.querySelector("h1").innerHTML="🇫🇷 "+[..."Français – Découvert
 let lt=null,lp=0,lstep=0,lsp=5,lvoice=1;
 function liveStop(){clearTimeout(lt);lt=null;try{speechSynthesis.cancel()}catch(e){}}
 function say(t){if(!lvoice)return;try{const u=new SpeechSynthesisUtterance(t.replace(/\([^)]*\)/g,"").replace(/\b(qc|qn)\b/g,""));u.lang="fr-FR";speechSynthesis.speak(u)}catch(e){}}
-function live(){if(!pool.length){$("app").innerHTML="<p>Keine Treffer.</p>";return}lp=0;liveRun()}
+function live(){if(!pool.length){$("app").innerHTML="<p>"+NONE()+"</p>";return}lp=0;liveRun()}
 function liveRun(){liveStop();const w=pool[0];lstep=0;liveDraw();if(!dir)say(w.f);lt=setTimeout(()=>{lstep=1;liveDraw();if(dir)say(w.f);lt=setTimeout(()=>{pool.push(pool.shift());liveRun()},3500)},lsp*1000)}
 function liveDraw(){const w=pool[0];$("app").innerHTML=`<div class="sm">🔴 LIVE · ${pool.length} Wörter im Stapel</div><div class="bar"><i style="${lstep?"animation:none;background:var(--ac)":"animation-duration:"+lsp+"s"}"></i></div><div class="fc">${lstep?`<div>${esc(Q(w))}<br><small style="color:var(--bl)">${esc(A(w))}</small></div>`:esc(Q(w))}</div><div class="row"><button onclick="liveTog()">${lp?"▶ Weiter":"⏸ Pause"}</button><button onclick="liveSkip()">⏭ Nächstes</button><button onclick="lvoice=!lvoice;liveDraw()">${lvoice?"🔊 Ton an":"🔇 Ton aus"}</button><select onchange="lsp=+this.value;liveRun()">${[3,5,8,12].map(s=>`<option value="${s}" ${s==lsp?"selected":""}>${s} Sek. Bedenkzeit</option>`).join("")}</select></div>`}
 function liveTog(){lp=!lp;if(lp){liveStop();liveDraw()}else liveRun()}
@@ -438,12 +407,15 @@ lsp=8;let seen=0,lgoal=10,ltip=0,lun=0;
 try{const o=JSON.parse(localStorage.getItem("frl")||"{}");if(o.d==new Date().toDateString())seen=o.n||0}catch(e){}
 const TIPS=["Du musst nichts tun – einfach laufen lassen 🙂","Nebenbei mitlesen reicht völlig.","Schon ein paar Wörter am Tag bringen richtig viel.","Kleine Schritte zählen!","Ein Wort pro Minute? Auch gut. Du bist dabei!"];
 function say(t,l){if(!lvoice)return;try{const u=new SpeechSynthesisUtterance(t.replace(/\([^)]*\)/g,"").replace(/\b(qc|qn)\b/g,"").replace(/etw\./g,"etwas").replace(/jdn\.|jdm\./g,"jemanden"));u.lang=l||"fr-FR";u.rate=.9;speechSynthesis.speak(u)}catch(e){}}
-function live(){if(!pool.length){$("app").innerHTML="<p>Keine Treffer.</p>";return}lp=0;try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{})}catch(e){}liveRun()}
+function live(){if(!pool.length){$("app").innerHTML="<p>"+NONE()+"</p>";return}lp=0;try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{})}catch(e){}liveRun()}
 function liveRun(){liveStop();const w=pool[0];lstep=0;ltip=(ltip+1)%TIPS.length;liveDraw();say(dir?w.d:w.f,dir?"de-DE":"fr-FR");lt=setTimeout(()=>{lstep=1;liveDraw();say(dir?w.f:w.d,dir?"fr-FR":"de-DE");lt=setTimeout(liveNext,4500)},lsp*1000)}
 function liveNext(){const w=pool.shift();seen++;try{localStorage.setItem("frl",JSON.stringify({d:new Date().toDateString(),n:seen}))}catch(e){}if(!w.r){w.r=1;pool.splice(Math.min(4,pool.length),0,w)}else{w.r=0;pool.push(w)}if(seen==lgoal)boom();liveRun()}
 function liveHard(){pool.splice(Math.min(3,pool.length),0,pool[0]);$("hb").textContent="✅ kommt gleich wieder"}
 function liveDraw(){const w=pool[0],p=Math.min(100,seen/lgoal*100);$("app").innerHTML=`<div class="sm">🔴 LIVE · läuft automatisch · Heute: ${seen}/${lgoal} Wörter${seen>=lgoal?" 🎉 Tagesziel geschafft!":""}</div><div class="bar g"><b style="width:${p}%"></b></div><div class="bar"><i style="${lstep?"animation:none;background:var(--ac)":"animation-duration:"+lsp+"s"}"></i></div><div class="fc big">${lstep?`<div>${esc(Q(w))}<br><small style="color:var(--bl)">${esc(A(w))}</small></div>`:esc(Q(w))}</div><div class="sm" style="text-align:center">${lun?TIPS[ltip]:"🔊 Tippe einmal irgendwo, damit der Ton startet"}</div><div class="row"><button onclick="liveTog()">${lp?"▶ Weiter":"⏸ Pause"}</button><button id="hb" onclick="liveHard()">🔁 Nochmal bald</button><button onclick="lvoice=!lvoice;liveDraw()">${lvoice?"🔊 Ton an":"🔇 Ton aus"}</button><select onchange="lsp=+this.value;liveRun()">${[[12,"Langsam"],[8,"Normal"],[5,"Schnell"]].map(([s,n])=>`<option value="${s}" ${s==lsp?"selected":""}>${n}</option>`).join("")}</select></div>`}
 document.addEventListener("pointerdown",()=>{if(!lun){lun=1;if(tab=="live"&&!lp)liveRun()}});
 function praise(){const p=document.createElement("div");p.className="praise";p.textContent=["Super!","Bravo!","Genau!","Top!","Magnifique!","Parfait!","Voilà!"][Math.random()*7|0];document.body.appendChild(p);setTimeout(()=>p.remove(),1000)}
+function speak(t,l){try{speechSynthesis.cancel();let x=t.replace(/\([^)]*\)/g,"");if(l=="de-DE")x=x.replace(/etw\./g,"etwas").replace(/jdn\./g,"jemanden").replace(/jdm\./g,"jemandem");else x=x.replace(/\bqc\b/g,"quelque chose").replace(/\bqn\b/g,"quelqu'un");const u=new SpeechSynthesisUtterance(x);u.lang=l;u.rate=.9;speechSynthesis.speak(u)}catch(e){}}
+function readCard(){const w=card;if(!w)return;const a=tab=="cards"&&flip;speak(a?A(w):Q(w),(a?!!dir:!dir)?"fr-FR":"de-DE")}
+function hardMark(){hard.add(HK(card));saveHard();buildSel();rate(0)}
 start();
 </script></body></html>
